@@ -1,0 +1,626 @@
+{% assign sca_product_id_text = "," | append : product.id | append : "," %}{% assign sca_price = product.price %}{% assign sca_price_min = product.price_min %}{% assign sca_price_max = product.price_max %}{% assign sca_compare_at_price = product.compare_at_price %}{% assign sca_compare_at_price_min = product.compare_at_price_min %}{% assign sca_compare_at_price_max = product.compare_at_price_max %}{% assign sca_product_available = product.available %}{% assign sca_product_variantCount = product.variants.size %}{% assign sca_compare_at_price_varies = product.compare_at_price_varies %}{% assign sca_price_varies = product.price_varies %}{% assign sca_has_only_default_variant = false %}{% assign sca_product_variants_json = product.variants | json %}{% capture sca_product_json %}{ {% if sca_all_gift_products_ids == null or sca_all_gift_products_ids contains sca_product_id_text %}{% assign sca_product_available = false %}{% assign sca_product_variantCount = 0 %}{% assign sca_has_only_default_variant = false %}{% assign sca_is_first_variant = true %}{% capture sca_variants_json%}[{% for variant in product.variants %}{% unless variant.metafields.secomapp.freegifts %}{% unless variant.title contains '(Freegifts)' %}{% unless variant.title contains '% off)' %}{% unless variant.metafields.shappify_qb.qb_hide == "1" %}{% unless variant.metafields.shappify_bundle.is_bundle == "true" %}{% unless variant.metafields.brodev_scn.hide == "true" %}{% unless variant.metafields.wholesaler2.wholesale %}{% unless variant.metafields.Wholesaler.level %}{% unless variant.title contains '(Wholesale' %}{% if sca_is_first_variant %}{{ variant | json }}{% assign sca_price = variant.price %} {% assign sca_price_min = variant.price %}{% assign sca_price_max = variant.price %}{% assign sca_compare_at_price = variant.compare_at_price %}{% assign sca_compare_at_price_min = variant.compare_at_price %}{% assign sca_compare_at_price_max = variant.compare_at_price %}{% assign sca_product_available = variant.available %}{% assign sca_product_variantCount = 1 %}{% assign sca_is_first_variant = false %}{% else %},{{variant | json }}{% if sca_price_min >= variant.price %}{% assign sca_price_min = variant.price %}{% assign sca_price = variant.price %}{% endif %}{% if sca_price_max <= variant.price %}{% assign sca_price_max = variant.price %}{% endif %}{% if variant.compare_at_price %}{% if sca_compare_at_price_min == null or sca_compare_at_price_min >= variant.compare_at_price %}{% assign sca_compare_at_price_min = variant.compare_at_price %}{% assign sca_compare_at_price = variant.compare_at_price %}{% endif %}{% if sca_compare_at_price_max == null or sca_compare_at_price_max < variant.compare_at_price %}{% assign sca_compare_at_price_max = variant.compare_at_price %}{% endif %}{% endif %}{% if variant.available == true %}{% assign sca_product_available = true %}{% endif %}{% assign sca_product_variantCount = sca_product_variantCount | plus: 1 %}{% endif %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endunless %}{% endfor %}]{% endcapture %}{% if sca_price_min < sca_price_max %}{% assign sca_price_varies = true %}{% else %}{% assign sca_price_varies = false %}{% endif %}{% if sca_compare_at_price_min < sca_compare_at_price_max %}{% assign sca_compare_at_price_varies = true %}{% else %}{% assign sca_compare_at_price_varies = false %}{% endif %}{% if sca_product_variantCount > 1 %}{% assign sca_has_only_default_variant = true %}{% endif %}{% if sca_product_variantCount == product.variants.size %}"variants":{{ product.variants }},{% else %}{% assign sca_product_variants_json = sca_variants_json %}"variants":{{sca_variants_json }},{% endif %}{% endif %}"id": {{ product.id }},"title": {{ product.title | json }},"handle": {{ product.handle | json }},"description": {{ product.description | json }},"published_at": {{ product.published_at | json }},"created_at": {{ product.created_at | json }},"vendor": {{ product.vendor | json }},"type": {{ product.type | json }},"tags": {{ product.tags | json }},"price": {{ sca_price }},"price_min": {{ sca_price_min }},"price_max": {{ sca_price_max }},"available": {{ product.available }},"price_varies": {{sca_price_varies }},"compare_at_price": {{ sca_compare_at_price }},"compare_at_price_min": {{ sca_compare_at_price_min }},"compare_at_price_max": {{ sca_compare_at_price_max }},"compare_at_price_varies": {{ sca_compare_at_price_varies }},"images": {{ product.images | json }},"featured_image": {{ product.featured_image | json }},"options": {{ product.options | json }},"media": {{ product.media | json }},"content": {{product.content | json}} }{% endcapture sca_product_json %}
+   
+   {%- comment -%}
+   Those are the option names for which we automatically detect swatch. For the color, we use them to display a swatch, while
+   for size, we use it to display a size chart (if applicable)
+   {%- endcomment -%}
+   
+   {%- assign color_label = 'color,colour,couleur,colore,farbe,ÃƒÂ¬Ã†â€™Ã¢â‚¬Â°,ÃƒÂ¨Ã¢â‚¬Â°Ã‚Â²,fÃƒÆ’Ã‚Â¤rg,farve' | split: ',' -%}
+   {%- assign size_label = 'size,taille,grÃƒÆ’Ã‚Â¶ÃƒÆ’Ã…Â¸e,tamanho,tamaÃƒÆ’Ã‚Â±o,koko,ÃƒÂ£Ã¢â‚¬Å¡Ã‚ÂµÃƒÂ£Ã¢â‚¬Å¡Ã‚Â¤ÃƒÂ£Ã¢â‚¬Å¡Ã‚Âº' | split: ',' -%}
+   
+   {%- assign size_chart_page = '' -%}
+   {%- assign product_popovers = '' -%}
+   {%- assign show_option_label = false -%}
+   
+   {%- assign selected_variant = product.selected_or_first_available_variant -%}
+   
+   {%- assign form_classes = '' -%}
+   
+   {% comment %}
+   {%- if product.tags contains 'PSOfdf' -%}
+    {%- assign form_classes = 'ProductForm pso' -%}
+   {%- else -%}
+    {%- assign form_classes = 'ProductForm' -%}
+   {%- endif -%}
+   {% endcomment %}
+   {%- assign form_classes = 'ProductForm' -%}
+   {%- for tag in product.tags -%}
+    {%- if tag contains 'PSO' -%}
+        {%- assign form_classes = 'ProductForm pso' -%}
+    {%- endif -%}
+   {%- endfor -%} 
+   
+   {%- form 'product', product, class: form_classes -%}
+     <div class="ProductForm__Variants">
+       {%- unless sca_product_variantCount == 1 -%}
+         {%- for option in product.options_with_values -%}
+           {%- assign downcase_option = option.name | downcase -%}
+   
+           {%- if section.settings.selector_mode == 'block' or color_label contains downcase_option and section.settings.show_color_swatch -%}
+             {%- assign show_option_label = true -%}
+           {%- endif -%}
+         {%- endfor -%}
+   
+         {%- for option in product.options_with_values -%}
+           {%- assign downcase_option = option.name | downcase -%}
+           {%- capture popover_id -%}popover-{{ product.id }}-{{ section.id }}-{{ option.name | handle }}{%- endcapture -%}
+   
+           <div class="ProductForm__Option {% if show_option_label %}ProductForm__Option--labelled{% endif %}">
+             {%- if show_option_label -%}
+               {%- assign size_chart_page = pages['size-chart'] -%}
+   
+               <span class="ProductForm__Label">
+                 {{ option.name }}:
+   
+                 {% if color_label contains downcase_option and section.settings.show_color_swatch %}
+                   <span class="ProductForm__SelectedValue">{{ option.selected_value }}</span>
+                 {% endif %}
+   
+                 {%- if size_label contains downcase_option and size_chart_page != empty -%}
+                   <button type="button" class="ProductForm__LabelLink Link Text--subdued" data-action="open-modal" aria-controls="modal-{{ size_chart_page.handle }}">
+                   {{- 'product.form.size_chart' | t -}}
+                 </button>
+                 {%- endif -%}
+               </span>
+             {%- endif -%}
+   
+             {%- if color_label contains downcase_option and section.settings.show_color_swatch -%}
+               <ul class="ColorSwatchList HorizontalList HorizontalList--spacingTight">
+                 {%- for value in option.values -%}
+                 {% unless value contains "% off)" %}
+                   {%- assign downcase_value = value | downcase -%}
+   
+                   <li class="HorizontalList__Item">
+                     {%- assign color_swatch_name = value | handle | append: '.png' -%}
+                     {%- assign color_swatch_image = images[color_swatch_name] -%}
+   
+                     <input id="option-{{ section.id }}-{{ forloop.parentloop.index0 }}-{{ forloop.index0 }}" class="ColorSwatch__Radio" type="radio" name="option-{{ forloop.parentloop.index0 }}" value="{{ value | escape }}" {% if value == option.selected_value %}checked="checked"{% endif %} data-option-position="{{ option.position }}">
+                     <label for="option-{{ section.id }}-{{ forloop.parentloop.index0 }}-{{ forloop.index0 }}" class="ColorSwatch ColorSwatch--large {% if downcase_value == 'white' %}ColorSwatch--white{% endif %}" data-tooltip="{{ value | escape }}" style="background-color: {{ value | replace: ' ', '' | downcase }}; {% if color_swatch_image != blank %}background-image: url({{ color_swatch_image | img_url: '64x64' }}){% endif %}">
+                       <span class="u-visually-hidden">{{ value }}</span>
+                     </label>
+                   </li>
+                 {% endunless %}
+                 {%- endfor -%}
+               </ul>
+             {%- elsif section.settings.selector_mode == 'block' -%}
+               <ul class="SizeSwatchList HorizontalList HorizontalList--spacingTight">
+                 {%- for value in option.values -%}
+                 {% unless value contains "% off)" %}
+                   <li class="HorizontalList__Item">
+                     <input id="option-{{ section.id }}-{{ forloop.parentloop.index0 }}-{{ forloop.index0 }}" class="SizeSwatch__Radio" type="radio" name="option-{{ forloop.parentloop.index0 }}" value="{{ value | escape }}" {% if value == option.selected_value %}checked="checked"{% endif %} data-option-position="{{ option.position }}">
+                     <label for="option-{{ section.id }}-{{ forloop.parentloop.index0 }}-{{ forloop.index0 }}" class="SizeSwatch">{{ value }}</label>
+                   </li>
+                 {% endunless %}
+                 {%- endfor -%}
+               </ul>
+             {%- else -%}
+               <button type="button" class="ProductForm__Item" aria-expanded="false" aria-controls="{{ popover_id }}">
+                 <span class="ProductForm__OptionName">{% unless show_option_label %}{{ option.name }}: {% endunless %}<span class="ProductForm__SelectedValue">{{ option.selected_value }}</span></span>
+                 {%- render 'icon' with 'select-arrow' -%}
+               </button>
+   
+               {%- capture popover_html -%}
+                 {%- if color_label contains downcase_option and section.settings.show_color_carousel -%}
+                   {%- for value in option.values -%}
+                   {% unless value contains "% off)" %}
+                     {%- if value == option.selected_value -%}
+                       {%- assign initial_image_index = forloop.index0 -%}
+                       {%- break -%}
+                     {%- endif -%}
+                   {% endunless %}
+                   {%- endfor -%}
+   
+                   {%- capture flickity_options -%}
+                   {
+                     "prevNextButtons": true,
+                     "pageDots": true,
+                     "initialIndex": {{ initial_image_index }},
+                     "arrowShape": {"x0": 20, "x1": 60, "y1": 40, "x2": 60, "y2": 35, "x3": 25}
+                   }
+                   {%- endcapture -%}
+   
+                   <div id="{{ popover_id }}" class="VariantSelector" aria-hidden="true">
+                     {%- capture option_index -%}option{{ option.position }}{%- endcapture -%}
+   
+                     <div class="VariantSelector__Carousel Carousel" data-flickity-config='{{ flickity_options }}'>
+                       {%- for value in option.values -%}
+                       {% unless value contains "% off)" %}
+                         {%- for variant in product.variants -%}
+                           {%- if variant[option_index] == value -%}
+                             {%- assign variant_image = variant.image | default: product.featured_image -%}
+                             {%- break -%}
+                           {%- endif -%}
+                         {%- endfor -%}
+   
+                         <div class="VariantSelector__Item Carousel__Cell {% if value == option.selected_value %}is-selected{% endif %}"
+                              data-background-color="{{ value | split: ' ' | last | handle }}"
+                              data-background-image="{{ value | handle | append: '.png' | asset_url }}"
+                              data-option-position="{{ option.position }}"
+                              data-option-value="{{ value | escape }}">
+                           <div class="VariantSelector__ImageWrapper AspectRatio AspectRatio--withFallback" style="max-width: {{ variant_image.width }}px; padding-bottom: {{ 100.0 | divided_by: variant_image.aspect_ratio }}%; --aspect-ratio: {{ variant_image.aspect_ratio }}">
+                             {%- capture supported_sizes -%}{%- render 'image-size', sizes: '200,400,600,800', image: variant_image -%}{%- endcapture -%}
+                             {%- assign image_url = variant_image | img_url: '1x1' | replace: '_1x1.', '_{width}x.' -%}
+   
+                             <img class="VariantSelector__Image Image--lazyLoad Image--fadeIn" data-src="{{ image_url }}" data-widths="[{{ supported_sizes }}]" data-sizes="auto" alt="{{ variant_image.alt | escape }}">
+                             <span class="Image__Loader"></span>
+                           </div>
+                         </div>
+                       {% endunless %}
+                       {%- endfor -%}
+                     </div>
+   
+                     <div class="VariantSelector__Info">
+                       <div class="VariantSelector__ChoiceList">
+                         {%- for value in option.values -%}
+                         {% unless value contains "% off)" %}
+                           {%- assign min_price_for_variant = sca_price_max -%}
+   
+                           {%- for variant in product.variants -%}
+                             {%- if variant[option_index] == value -%}
+                               {%- assign min_price_for_variant = min_price_for_variant | at_most: variant.price -%}
+                             {%- endif -%}
+                           {%- endfor -%}
+   
+                           <div class="VariantSelector__Choice {% if value == option.selected_value %}is-selected{% endif %}">
+                             <div class="VariantSelector__ChoiceColor">
+                               {%- assign downcase_value = value | downcase -%}
+   
+                               {%- assign color_swatch_name = value | handle | append: '.png' -%}
+                               {%- assign color_swatch_image = images[color_swatch_name] -%}
+   
+                               <span class="VariantSelector__ColorSwatch {% if downcase_value == 'white' %}VariantSelector__ColorSwatch--white{% endif %}" style="background-color: {{ value | replace: ' ', '' | downcase }}; {% if color_swatch_image != blank %}background-image: url({{ color_swatch_image | img_url: '64x64' }}){% endif %}"></span>
+                               <span class="VariantSelector__ChoiceValue">{{ value }}</span>
+                             </div>
+   
+                             <div class="VariantSelector__ChoicePrice">
+                               {%- if available_prices_for_option_value.size > 1 -%}
+                                 {%- capture formatted_min_price -%}<span>{{ min_price_for_variant | money_without_trailing_zeros }}</span>{%- endcapture -%}
+                                 <span class="Heading Text--subdued">{{ 'product.form.from_price_html' | t: min_price: formatted_min_price }}</span>
+                               {%- else -%}
+                                 <span class="Heading Text--subdued">{{ min_price_for_variant | money_without_trailing_zeros }}</span>
+                               {%- endif -%}
+                             </div>
+                           </div>
+                         {% endunless %}
+                         {%- endfor -%}
+                       </div>
+   
+                       <button type="button" class="VariantSelector__Button Button Button--primary Button--full" data-action="select-variant">{{- 'product.form.select_model' | t -}}</button>
+                     </div>
+                   </div>
+                 {%- else -%}
+                   <div id="{{ popover_id }}" class="OptionSelector Popover Popover--withMinWidth" aria-hidden="true">
+                     <header class="Popover__Header">
+                       <button type="button" class="Popover__Close Icon-Wrapper--clickable" data-action="close-popover">{% render 'icon' with 'close' %}</button>
+                       <span class="Popover__Title Heading u-h4">{{ option.name | escape }}</span>
+                     </header>
+   
+                     <div class="Popover__Content">
+                       <div class="Popover__ValueList" data-scrollable>
+                         {%- for value in option.values -%}
+                         {% unless value contains "% off)" %}
+                           <button type="button" class="Popover__Value {% if value == option.selected_value %}is-selected{% endif %} Heading Link Link--primary u-h6"
+                                   data-value="{{ value | escape }}"
+                                   data-option-position="{{ option.position }}"
+                                   data-action="select-value">
+                             {{- value | escape -}}
+                           </button>
+                         {% endunless %}
+                         {%- endfor -%}
+                       </div>
+   
+                       {%- assign size_chart_page = pages['size-chart'] -%}
+   
+                       {%- if show_option_label == false and size_label contains downcase_option and size_chart_page != empty -%}
+                         <button type="button" class="Popover__FooterHelp Heading Link Link--primary Text--subdued u-h6" data-action="open-modal" aria-controls="modal-{{ size_chart_page.handle }}">
+                           {{- 'product.form.size_chart' | t -}}
+                         </button>
+                       {%- endif -%}
+                     </div>
+                   </div>
+                 {%- endif -%}
+               {%- endcapture -%}
+   
+               {%- assign product_popovers = product_popovers | append: popover_html -%}
+             {%- endif -%}
+           </div>
+         {%- endfor -%}
+   
+         <div class="no-js ProductForm__Option">
+           <div class="Select Select--primary">
+             {%- render 'icon' with 'select-arrow' -%}
+   
+             <select id="product-select-{{ product.id }}" name="id" title="Variant">
+               {%- for variant in product.variants -%}
+                 <option {% if variant == selected_variant %}selected="selected"{% endif %} {% unless variant.available %}disabled="disabled"{% endunless %} value="{{ variant.id }}" data-sku="{{ variant.sku }}">{{ variant.title }} - {{ variant.price | money }}</option>
+               {%- endfor -%}
+             </select>
+           </div>
+         </div>
+       {%- else -%}
+         <input type="hidden" name="id" data-sku="{{ selected_variant.sku }}" value="{{ selected_variant.id }}">
+       {%- endunless -%}
+       
+       <div data-retailer-recommandsize></div>
+   
+       {%- if section.settings.show_quantity_selector -%}
+         {%- if show_option_label -%}
+           <span class="ProductForm__Label QuantityLabel">{{ 'product.form.quantity' | t }}:</span>
+         {%- endif -%}
+   
+         <div class="ProductForm__QuantitySelector">
+           <div class="QuantitySelector QuantitySelector--large">
+             {%- assign quantity_minus_one = line_item.quantity | minus: 1 -%}
+   
+             <span class="QuantitySelector__Button Link Link--secondary" data-action="decrease-quantity">{% render 'icon' with 'minus' %}</span>
+             <input type="text" class="QuantitySelector__CurrentQuantity" pattern="[0-9]*" name="quantity" value="1">
+             <span class="QuantitySelector__Button Link Link--secondary" data-action="increase-quantity">{% render 'icon' with 'plus' %}</span>
+           </div>
+         </div>
+       {%- else -%}
+         <input type="hidden" name="quantity" value="1">
+       {%- endif -%}
+   
+       {%- if section.settings.show_inventory_quantity -%}
+         {%- assign hide_inventory_quantity_by_default = false -%}
+         
+         {%- if selected_variant.inventory_management == blank or selected_variant.inventory_quantity <= 0 -%}
+           {%- assign hide_inventory_quantity_by_default = true -%}
+         {%- endif -%}
+   
+         {%- if section.settings.inventory_quantity_threshold != 0 and selected_variant.inventory_quantity > section.settings.inventory_quantity_threshold -%}
+           {%- assign hide_inventory_quantity_by_default = true -%}
+         {%- endif -%}
+   
+         <p class="ProductForm__Inventory Text--subdued" {% if hide_inventory_quantity_by_default %}style="display: none"{% endif %}>
+           {%- if section.settings.inventory_quantity_threshold == 0 -%}
+             {{- 'product.form.inventory_quantity_count' | t: count: selected_variant.inventory_quantity -}}
+           {%- else -%}
+             {{- 'product.form.low_inventory_quantity_count' | t: count: selected_variant.inventory_quantity -}}
+           {%- endif -%}
+         </p>
+       {%- endif -%}
+     </div>
+     
+     
+  
+     {%- comment -%}
+     --------------------------------------------------------------------------------------------------------------------
+     ADD TO CART BUTTON
+     --------------------------------------------------------------------------------------------------------------------
+     {%- endcomment -%}
+  
+    <div class="variant_almost_sold_out" style="margin-bottom: 20px; display:none; color: #ff0000; text-align: center; position: relative;padding: 14px 28px;line-height: normal;text-transform: uppercase;font-size: 13px;text-align: center;letter-spacing: .2em;font-family: Linotype Didot,serif;font-weight: 700;font-style: normal;background-color: transparent;transition: color .45s cubic-bezier(.785,.135,.15,.86),border .45s cubic-bezier(.785,.135,.15,.86);z-index: 1;-webkit-tap-highlight-color: initial;cursor: not-allowed;" >{% render 'variant-almost-sold-out.liquid' %}</div>
+    <div class="variant_only_one_item_left" style="margin-bottom: 20px; display:none; color: #ff0000; text-align: center; position: relative;padding: 14px 28px;line-height: normal;text-transform: uppercase;font-size: 13px;text-align: center;letter-spacing: .2em;font-family: Linotype Didot,serif;font-weight: 700;font-style: normal;background-color: transparent;transition: color .45s cubic-bezier(.785,.135,.15,.86),border .45s cubic-bezier(.785,.135,.15,.86);z-index: 1;-webkit-tap-highlight-color: initial;cursor: not-allowed;">{% render 'variant-only-one-item-left.liquid' %}</div>
+    <div class="variant_stopped_selling" style="margin-bottom: 20px; display:none; color: #939393; text-align: center; position: relative;padding: 14px 28px;line-height: normal;text-transform: uppercase;font-size: 13px;text-align: center;letter-spacing: .2em;font-family: Linotype Didot,serif;font-weight: 700;font-style: normal;background-color: transparent;transition: color .45s cubic-bezier(.785,.135,.15,.86),border .45s cubic-bezier(.785,.135,.15,.86);z-index: 1;-webkit-tap-highlight-color: initial;cursor: not-allowed;">{% render 'custom-variant-soldout-button.liquid' %}</div>
+      {% capture varaint_qty_count %}
+  	  {% for variant in product.variants %}
+  		 {% if variant.metafields.vit.stop_selling == true or variant.metafields.vit.stop_selling == false or variant.metafields.vit.stop_selling == blank %}
+             {% assign all_stopped_selling_condition = true %}
+  		 {% else %}
+  		   {% assign all_stopped_selling_condition = false %}
+           {% endif %}
+  		 {% if variant.metafields.vit.stop_selling == true %}
+             {% assign stopped_selling_true = true %}
+  		 {% else %}
+  		   {% assign stopped_selling_true = false %}
+           {% endif %}
+  		 {% if variant.metafields.vit.stop_selling == false or variant.metafields.vit.stop_selling == true or variant.metafields.vit.stop_selling == blank %}
+             {% assign stopped_selling_false_blank = true %}
+  		 {% else %}
+  		   {% assign stopped_selling_false_blank = false %}
+           {% endif %}
+  
+  		 {% if variant.inventory_policy == 'continue' %}
+  			{% assign continue =  '9001' %}
+              "{{variant.option1}} {{variant.option2}}":{{ continue }}{% unless forloop.last %},{% endunless %}
+        	 {% elsif stopped_selling_true == true and variant.inventory_policy == 'deny' %}			
+  			"{{variant.option1}} {{variant.option2}}":{{ variant.metafields.vit.stop_selling }}{% unless forloop.last %},{% endunless %}
+  		 {% elsif stopped_selling_false_blank == true and variant.inventory_policy == 'deny' %}
+            	{% if variant.inventory_quantity <= 0 %}
+  				{% assign qty_zero =  '9002' %}
+  				"{{variant.option1}} {{variant.option2}}":{{ qty_zero }}{% unless forloop.last %},{% endunless %}
+        	 	{% elsif variant.inventory_quantity == 1 %}
+  				{% assign qty_one =  '9003' %}
+  				"{{variant.option1}} {{variant.option2}}":{{ qty_one }}{% unless forloop.last %},{% endunless %}
+  			{% elsif variant.inventory_quantity == 2 %}
+  				{% assign qty_two =  '9004' %}
+  				"{{variant.option1}} {{variant.option2}}":{{ qty_two }}{% unless forloop.last %},{% endunless %}
+  			{% else %}
+  				"{{variant.option1}} {{variant.option2}}":{{ variant.inventory_quantity }}{% unless forloop.last %},{% endunless %}
+  			{% endif %}
+  		 {% endif %}
+  	  {% endfor %}
+  	{% endcapture %}
+      
+      {% capture varaint_qty_count_meta_data %}
+        {% for variant in product.variants %}
+  		 {% if variant.metafields.vit.stop_selling == true or variant.metafields.vit.stop_selling == false or variant.metafields.vit.stop_selling == blank %}
+             {% assign all_stopped_selling_condition = true %}
+  		 {% else %}
+  		   {% assign all_stopped_selling_condition = false %}
+           {% endif %}
+  		 {% if variant.metafields.vit.stop_selling == true %}
+             {% assign stopped_selling_true = true %}
+  		 {% else %}
+  		   {% assign stopped_selling_true = false %}
+           {% endif %}
+  		 {% if variant.metafields.vit.stop_selling == false or variant.metafields.vit.stop_selling == true or variant.metafields.vit.stop_selling == blank %}
+             {% assign stopped_selling_false_blank = true %}
+  		 {% else %}
+  		   {% assign stopped_selling_false_blank = false %}
+           {% endif %}
+  
+  		 {% if variant.inventory_policy == 'continue' %}
+  			{% assign continue =  '9001' %}
+              {{variant.id}}:{{ continue }}{% unless forloop.last %},{% endunless %}
+        	 {% elsif stopped_selling_true == true and variant.inventory_policy == 'deny' %}			
+  			{{variant.id}}:{{ variant.metafields.vit.stop_selling }}{% unless forloop.last %},{% endunless %}
+  		 {% elsif stopped_selling_false_blank == true and variant.inventory_policy == 'deny' %}
+            	{% if variant.inventory_quantity <= 0 %}
+  				{% assign qty_zero =  '9002' %}
+  				{{variant.id}}:{{ qty_zero }}{% unless forloop.last %},{% endunless %}
+        	 	{% elsif variant.inventory_quantity == 1 %}
+  				{% assign qty_one =  '9003' %}
+  				{{variant.id}}:{{ qty_one }}{% unless forloop.last %},{% endunless %}
+  			{% elsif variant.inventory_quantity == 2 %}
+  				{% assign qty_two =  '9004' %}
+  				{{variant.id}}:{{ qty_two }}{% unless forloop.last %},{% endunless %}
+  			{% else %}
+  				{{variant.id}}:{{ variant.inventory_quantity }}{% unless forloop.last %},{% endunless %}
+  			{% endif %}
+        	 {% endif %}
+  	  {% endfor %}
+      {% endcapture %}
+  
+     <div class="default-sold-out">
+       <button type="submit" class="ProductForm__AddToCart Button {% if selected_variant.available and section.settings.show_payment_button == false %}Button--primary{% else %}Button--secondary{% endif %} Button--full" {% if selected_variant.available %}data-action="add-to-cart"{% else %}disabled="disabled"{% endif %}>
+         {%- if selected_variant.available -%}
+           <span>{% if product.template_suffix == 'pre-order' %}{{ 'product.form.pre_order' | t }}{% else %}{{ 'product.form.add_to_cart' | t }}{% endif %}</span>
+   
+           {%- if section.settings.show_price_in_button -%}
+             <span class="Button__SeparatorDot"></span>
+             <span>{{ selected_variant.price | money_without_trailing_zeros }}</span>
+           {%- endif -%}
+         {%- else -%}
+           {{- 'product.form.sold_out' | t -}}
+         {%- endif -%}
+       </button>
+   
+       {%- if section.settings.show_payment_button and product.template_suffix != 'pre-order' and current_variant_selling_status != true -%}
+         {{ form | payment_button }}
+       {%- endif -%}
+     </div>
+   
+   {%- endform -%}
+   
+   {%- comment -%}
+   
+   <div class="variant_stopped_selling" >{% render 'custom-variant-soldout-button.liquid' %}</div>
+   
+   {% capture stopped_selling_data %}
+    {% for variant in product.variants %}
+         "{{variant.option1}} {{variant.option2}}":{% if variant.metafields.vit.stop_selling %}{{ variant.metafields.vit.stop_selling }}{% else %}{{'null'}}{% endif %}{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+   {% endcapture %}
+   
+   {% assign p_list = stopped_selling_data | split: "," %}
+   
+   {% capture meta_data %}
+    {% for variant in product.variants %}
+         {{variant.id}}:{% if variant.metafields.vit.stop_selling %}{{ variant.metafields.vit.stop_selling }}{% else %}{{'null'}}{% endif %}{% unless forloop.last %},{% endunless %}
+    {% endfor %}
+   {% endcapture %}
+  
+   {%- endcomment -%}
+    
+   
+   <div class="sca-fg-cat-list" style="display:none;" name="secomapp-fg-data-{{ product.id }}"></div>
+   
+   {%- if size_chart_page != empty -%}
+     {%- comment -%}If we have a size chart we capture the modal content (it must be displayed outside the form for proper positioning){%- endcomment -%}
+   
+     {%- capture product_modals -%}
+       <div id="modal-{{ size_chart_page.handle }}" class="Modal Modal--dark Modal--fullScreen Modal--pageContent" aria-hidden="true" role="dialog" data-scrollable>
+         <header class="Modal__Header">
+           <h2 class="Modal__Title Heading u-h1">{{ size_chart_page.title }}</h2>
+         </header>
+   
+         <div class="Modal__Content Rte">
+           <div class="Container Container--extraNarrow">
+             {{- size_chart_page.content -}}
+           </div>
+         </div>
+   
+         <button class="Modal__Close RoundButton RoundButton--large" data-animate-bottom data-action="close-modal">{% render 'icon' with 'close' %}</button>
+       </div>
+     {%- endcapture -%}
+   {%- endif -%}
+   
+   {%- if section.settings.show_payment_button and selected_variant.available == false and current_variant_selling_status != true -%}
+     <style>
+       #shopify-section-{{ section.id }} .shopify-payment-button {
+         display: none;
+       }
+     </style>
+   {%- endif -%}
+   
+   {%- comment -%}
+   --------------------------------------------------------------------------------------------------------------------
+   OFF SCREEN ELEMENTS
+   
+   Implementation note: in the past (with "include") we could accumulate the data and output it outside the snippet
+   itself. However with the new "render" tag, everything that is captured inside cannot be used outside the snippet
+   itself. As a consequence we are moving them in JavaScript. This allows to make sure that those elements are upper
+   in the DOM tree, and do not show below the content
+   --------------------------------------------------------------------------------------------------------------------
+   {%- endcomment -%}
+   
+   <div class="Product__OffScreen">
+     {{- product_popovers -}}
+     {{- product_modals -}}
+   </div>
+   
+   {% comment %}
+   ------------------------------------------------------------------------------
+   Product Data. This must be outputted for all products (including home page).
+   
+   IMPORTANT: THIS CODE IS VITAL. DO NOT EDIT IT NOT REMOVE IT. MAKE SURE TO KEEP
+   THE EXACT SAME ATTRIBUTES.
+   ------------------------------------------------------------------------------
+   {% endcomment %}
+   
+   <script type="application/json" data-product-json>
+     {
+       "product": {{ product | json }},
+       "selected_variant_id": {{ selected_variant.id }}
+       {%- if section.settings.show_inventory_quantity -%}
+         ,"inventories": {
+           {%- for variant in product.variants -%}
+             {%- assign inventory_message = '' -%}
+   
+             {%- if section.settings.inventory_quantity_threshold == 0 -%}
+               {%- capture inventory_message -%}{{- 'product.form.inventory_quantity_count' | t: count: variant.inventory_quantity -}}{%- endcapture -%}
+             {%- else -%}
+               {%- capture inventory_message -%}{{- 'product.form.low_inventory_quantity_count' | t: count: variant.inventory_quantity -}}{%- endcapture -%}
+             {%- endif -%}
+   
+             "{{ variant.id }}": {
+               "inventory_management": {{ variant.inventory_management | json }},
+               "inventory_policy": {{ variant.inventory_policy | json }},
+               "inventory_quantity": {{ variant.inventory_quantity | json }},
+               "inventory_message": {{ inventory_message | json }}
+             }{% unless forloop.last %},{% endunless %}
+           {%- endfor -%}
+         }
+       {%- endif -%}
+     }
+   </script>
+   
+   <script>
+     const currentVariantId = {{ product.selected_or_first_available_variant.id }};  // get the currently selected before variant is changed. 
+     const varaint_qty_count = { {{ varaint_qty_count }} };
+     const varaint_qty_count_meta_data = {  {{ varaint_qty_count_meta_data }}  };
+     console.log(varaint_qty_count);
+     console.log(varaint_qty_count_meta_data);
+     
+     
+     function variant_background_quanty(){
+       $.each(varaint_qty_count,function(key, val){
+         var currentColorOptionValue = $('.ColorSwatchList .ColorSwatch__Radio:checked').val();
+         var variantSplit = key.split(' ');
+         var variantSplit2 = key.split(' ');
+         let popped = variantSplit2.pop();
+         let text = variantSplit2.join(' ');
+         console.log(text);
+         
+         var currentElement = $("label").filter(function() {
+                                  return $(this).text() === variantSplit[variantSplit.length - 1];
+                              });
+         
+  //        if(variantSplit.length == 3){
+  //         var currentElement = $("label").filter(function() {
+  //                                 return $(this).text() === variantSplit[2];
+  //                             });
+  //        }
+         
+         if(currentColorOptionValue == text){
+           
+           if(val == 9001){  
+             $(currentElement).parent('li').addClass('continue_selling');
+           }else{
+             $(currentElement).parent('li').removeClass('continue_selling');  
+           }
+           
+           if(val == true){  
+             $(currentElement).parent('li').addClass('out_of_stock');
+           }else{
+             $(currentElement).parent('li').removeClass('out_of_stock');  
+           }
+           
+           if(val > 2 && val != 9004 && val != 9003 && val != 9002 && val != 9001 ){  
+             $(currentElement).parent('li').addClass('qty_available');
+           }else{
+             $(currentElement).parent('li').removeClass('qty_available'); 
+           }
+           
+           if(val == 9004){  
+             $(currentElement).parent('li').addClass('almost_sold_out');
+           }else{
+             $(currentElement).parent('li').removeClass('almost_sold_out'); 
+           }
+           
+           if(val == 9003){  
+             $(currentElement).parent('li').addClass('only_one_item_left');
+           }else{
+             $(currentElement).parent('li').removeClass('only_one_item_left');  
+           }
+           
+           if(val == 9002){  
+             $(currentElement).parent('li').addClass('qty_not_available');
+           }else{
+             $(currentElement).parent('li').removeClass('qty_not_available');  
+           }
+           
+         }
+       });
+     }
+     
+     variant_background_quanty();
+     
+     
+     const variantInfo = (id) => {
+      var selectorDefaultSoldOut = document.querySelector('.default-sold-out'); 
+      var selectorStoppedSelling = document.querySelector('.variant_stopped_selling'); 
+      var selectorAlmostSoldOut = document.querySelector('.variant_almost_sold_out');
+      var selectorOnlyOneItemLeft = document.querySelector('.variant_only_one_item_left');
+      var hideOutOfStockDefBtn = document.querySelector('.ProductForm__AddToCart.Button.Button--full.Button--secondary'); 
+       
+       if (varaint_qty_count_meta_data[id] == 9001 && varaint_qty_count_meta_data[id]) {
+        selectorOnlyOneItemLeft.style.display = 'none';
+        selectorStoppedSelling.style.display = 'none';
+        selectorAlmostSoldOut.style.display = 'none';
+        selectorDefaultSoldOut.style.display = 'block'; 
+         
+       }else if (varaint_qty_count_meta_data[id] == true && varaint_qty_count_meta_data[id]) {
+        selectorOnlyOneItemLeft.style.display = 'none';
+        selectorAlmostSoldOut.style.display = 'none'; 
+        selectorDefaultSoldOut.style.display = 'none';
+        selectorStoppedSelling.style.display = 'block';
+       }else if (varaint_qty_count_meta_data[id] == 9004 && varaint_qty_count_meta_data[id]) {
+        selectorOnlyOneItemLeft.style.display = 'none';
+        selectorStoppedSelling.style.display = 'none'; 
+        selectorAlmostSoldOut.style.display = 'block';
+        selectorDefaultSoldOut.style.display = 'block';
+       }else if (varaint_qty_count_meta_data[id] == 9003 && varaint_qty_count_meta_data[id]) {
+        selectorAlmostSoldOut.style.display = 'none';
+        selectorStoppedSelling.style.display = 'none'; 
+        selectorOnlyOneItemLeft.style.display = 'block';
+        selectorDefaultSoldOut.style.display = 'block';
+       }else if (varaint_qty_count_meta_data[id] == 9002 && varaint_qty_count_meta_data[id]) {
+        hideOutOfStockDefBtn.style.display = 'none';
+        selectorOnlyOneItemLeft.style.display = 'none';
+        selectorStoppedSelling.style.display = 'none'; 
+        selectorAlmostSoldOut.style.display = 'none';
+        selectorDefaultSoldOut.style.display = 'block';
+       }else{
+        selectorAlmostSoldOut.style.display = 'none';
+        selectorStoppedSelling.style.display = 'none';
+        selectorOnlyOneItemLeft.style.display = 'none';
+        selectorDefaultSoldOut.style.display = 'block'; 
+       }
+       
+     }
+     
+     variantInfo(currentVariantId);
+     
+   // When the variant is changed, get the id and call the function. :)
+     document.addEventListener('variant:changed', function(event) { 
+       var variant = event.detail.variant; // Gives you access to the whole variant details
+       var id = variant.id 
+       variantInfo(id);
+       variant_background_quanty();
+     });
+     
+   </script> 
+   

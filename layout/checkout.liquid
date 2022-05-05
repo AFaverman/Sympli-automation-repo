@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+  <html lang="{{ locale }}" dir="{{ direction }}" class="{{ checkout_html_classes }}">
+    <head>
+      <meta charset="utf-8">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, height=device-height, minimum-scale=1.0, user-scalable=0">
+      <meta name="referrer" content="origin">
+  
+      <title>{{ page_title }}</title>
+  
+      {{ content_for_header }}
+  
+      {{ checkout_stylesheets }}
+      {{ checkout_scripts }}
+    	{{ '//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js' | script_tag }}
+  
+  
+  
+  
+  
+  
+  <!-- GSSTART Slider code start. Do not change -->{% if product.id > 1 %}
+  <script type="text/javascript" src="https://gravity-software.com/js/shopify/slider_shop32535.js?v=388f5b46548afe106957dda747648b36"></script> 
+   {% if product.variants.size > 1 %}<script>
+  gsSliderDefaultV = "{{ product.selected_or_first_available_variant.id }}";
+  var variantImagesByVarianName = {};
+  var variantImagesByVarianNameMix = {};
+   var variantImagesGS = {},
+      thumbnails,
+      variant,
+      variantImage,
+      optionValue,
+      cntImages;
+      productOptions = [];
+      cntImages = 0;
+      {% for variant in product.variants %}
+         variant = {{ variant | json }};
+         if ( typeof variant.featured_image !== 'undefined' && variant.featured_image !== null ) {
+           variantImage =  variant.featured_image.src.split('?')[0].replace(/http(s)?:/,'');
+           variantImagesGS[variant.id] = variantImage;
+           variantImagesByVarianName[variant.option1] = variantImage;
+  var variantMixName = "";
+  if(variant.option1 != null) {
+  variantMixName = variant.option1;
+  }
+  	 if(variant.option2 != null) {
+  		variantImagesByVarianName[variant.option2] = variantImage;
+  		variantMixName = variantMixName + ";gs;" + variant.option2;
+  	 }
+           if(variant.option3 != null) {
+                  variantImagesByVarianName[variant.option3] = variantImage;
+  		variantMixName = variantMixName + ";gs;" + variant.option3;
+           }
+  
+  if(variantMixName != "") {
+  variantImagesByVarianNameMix[variantMixName] = variantImage;
+  }
+  
+           cntImages++;
+         }
+      {% endfor %}
+                  if(cntImages == 0) {
+            variantImagesGS = undefined;
+                  }
+  </script> {% endif %}
+  <script>
+  
+  var imageDimensionsWidth = {};
+  var imageDimensionsHeight = {};
+  var imageSrcAttr = {};
+  var altTag = {};  
+  
+  var mediaGS = [];  
+    var productImagesGS = [];
+  var productImagesGSUrls = [];
+  {% for image in product.images %}
+    var productImageUrl = "{{ image.src }}";
+    var dotPosition = productImageUrl.lastIndexOf(".");
+    productImageUrl = productImageUrl.substr(0, dotPosition);
+    productImagesGS.push(productImageUrl);
+    imageDimensionsWidth[{{ image.id }}] = "{{ image.width }}";
+    imageDimensionsHeight[{{ image.id }}] = "{{ image.height }}";
+    altTag[{{ image.id }}] = "{{ image.alt | replace: '\"', '"' | replace: '"', '\"' | strip | strip_newlines }}";
+    imageSrcAttr[{{ image.id }}] = "{{ image.src }}";
+    productImagesGSUrls.push("{{ image.src | img_url: '240x' }}");
+  {% endfor %}
+  
+  {%- for media in product.media -%}
+      {% case media.media_type %}
+  	{% when "image" %}                           
+                             var mediaObjectGS ={id: "{{ media.image.id  }}", mediaType:"{{ media.media_type }}", previewImgURL:"{{ media.image.src | img_url: "240x" }}", previewImg:"{{ media.image.src }}", tag:"{{ media.image.src | img_url: "240x" }}"};  
+              mediaGS.push(mediaObjectGS);
+      {% when "video" %}
+                var productImageUrl = "{{ media.preview_image }}";
+    var dotPosition = productImageUrl.lastIndexOf(".");
+    productImageUrl = productImageUrl.substr(0, dotPosition);                     
+    var mediaObjectGS ={id: "{{ media.id }}", mediaType:"{{ media.media_type }}", width: "{{ media.preview_image.width }}", height: "{{ media.preview_image.height }}", previewImgURL:"{{ media.preview_image | img_url: "500x" }}", previewImg:"" + productImageUrl +  "", tag:'{{ media | video_tag: controls: true }}'};                                  
+              mediaGS.push(mediaObjectGS);                                
+  	{% when "external_video" %}                
+                var productImageUrl = "{{ media.preview_image }}";
+    var dotPosition = productImageUrl.lastIndexOf(".");
+    productImageUrl = productImageUrl.substr(0, dotPosition);                     
+              var mediaObjectGS ={id: "{{ media.id }}", mediaType:"{{ media.media_type }}", width: "{{ media.preview_image.width }}", height: "{{ media.preview_image.height }}", previewImgURL:"{{ media.preview_image | img_url: "500x" }}", previewImg:"" + productImageUrl +  "", tag:'{{ media | external_video_tag }}'};                                  
+              mediaGS.push(mediaObjectGS);
+      {% endcase %}
+  {%- endfor -%}      
+                      
+  
+  </script>
+  
+  {% endif %}<!-- Slider code end. Do not change GSEND -->
+ 
+ <style>
+  .skeleton-while-loading--sm{
+     display: none;
+  }
+ </style>
+ </head>
+ 
+    <body>
+      {{ skip_to_content_link }}
+  
+      <header class="banner" data-header role="banner">
+        <div class="wrap">
+          {{ content_for_logo }}
+        </div>
+      </header>
+  
+      {{ order_summary_toggle }}
+      <div class="content" data-content>
+        <div class="wrap">
+          <div class="main">
+            <header class="main__header" role="banner">
+              {{ content_for_logo }}
+              {{ breadcrumb }}
+              {{ alternative_payment_methods }}
+            </header>
+            <main class="main__content" role="main">
+              {{ content_for_layout }}
+            </main>
+            <footer class="main__footer" role="contentinfo">
+              {{ content_for_footer }}
+            </footer>
+          </div>
+          <aside class="sidebar" role="complementary">
+            <div class="sidebar__header">
+              {{ content_for_logo }}
+            </div>
+            <div class="sidebar__content">
+              <h2><b>All discounted products and products eligible for promotion are FINAL SALE.</b></h2><br>
+              &nbsp;&nbsp;
+              &nbsp;&nbsp;
+              <h2><b>*To show our support, Sympli will donate a portion of proceeds from each order to the women of Ukraine until April 30th, 2022.</b></h2><br>
+              &nbsp;&nbsp;
+              {{ content_for_order_summary }}
+            </div>
+          </aside>
+        </div>
+      </div>
+      
+      <div class="data" style="display:none;">
+        <span class="taxAmount">{{ checkout.tax_price | money_without_currency | remove: ',' }}</span>
+        <span class="grandTotal">{{ checkout.total_price | money_without_currency | remove: ',' }}</span>
+        <span class="currency">{{ shop.currency }}</span>
+        
+        {% for line_item in checkout.line_items %}
+        {% if line_item.line_level_discount_allocations != blank %}
+          <div class="lineItem">
+            <span class="compareAtPrice">{{ line_item.original_price | money_without_currency | remove: ',' }}</span>
+          </div>
+        {% else %}
+          <div class="lineItem">
+            <span class="compareAtPrice">{{ line_item.variant.compare_at_price | money_without_currency | remove: ',' }}</span>
+          </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      
+      {% comment %}
+      {% assign hasItem = false %}
+      {% assign itm = false %}
+      {%- for line_item in cart.items -%}
+          {% if line_item.variant_id == '40125709287583' %}
+  	        {% assign hasItem = true %}	
+          {% endif %}
+      
+      	{% if line_item.product.tags contains 'COLLECTION_CLEARANCE' %}
+  	        {% assign itm = true %}	
+      	{% endif %}
+      {%- endfor -%}
+      <script>
+        console.log('{{itm}}');
+        console.log('{{hasItem}}');
+        {% if hasItem == false %}
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", '/cart/add.js', true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({
+          items: [
+            {
+              quantity: 1,
+              id: 40125709287583
+            }
+          ]
+        }));
+        {% endif %}
+        /*
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            cart = JSON.parse(this.responseText);          
+            var lineitems = cart.items;
+            lineitems.forEach(function(item, index){
+              console.log(item.handle);
+              var xhttp1 = new XMLHttpRequest();
+              xhttp1.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+  				var product = JSON.parse(this.responseText);                
+                  if(product.tags.includes("COLLECTION_CLEARANCE")){
+                    var xhr = new XMLHttpRequest();
+                    xhr.open("POST", '/cart/add.js', true);
+                    xhr.setRequestHeader('Content-Type', 'application/json');
+                    xhr.send(JSON.stringify({
+                      items: [
+                        {
+                          quantity: 1,
+                          id: 40125709287583
+                        }
+                      ]
+                    }));
+                  }
+                  
+                }
+              };
+              xhttp1.open("GET", "/products/"+ item.handle + ".js", true);
+              xhttp1.send();          
+            });          
+          }
+        };
+        xhttp.open("GET", "/cart.js", true);
+        xhttp.send();
+        */
+        
+      </script>
+      {% endcomment %}
+  
+      {{ tracking_code }}
+    <link rel="stylesheet" href="https://gravity-software.com/js/shopify/rondell/jquery.rondellf85.css?v=123"/>
+      
+    <script type="text/javascript">
+      $(function() {
+        	  var priceArry = [];
+            $('.data .lineItem').each(function(key, data) {
+              //console.log(data);
+              var compareAtPrice = $(this).find('.compareAtPrice').text();
+              //console.log(compareAtPrice);
+              priceArry.push(compareAtPrice);
+              
+            });
+            
+            //console.log(priceArry);
+            
+            $('.product-table > tbody  > tr').each(function(product_index, tr) { 
+               console.log(product_index);
+               console.log(tr);
+               var priceDiv = $(tr).find(".product__price");
+                $.each(priceArry, function(compare_price_index, compare_price ) {
+                  console.log(compare_price_index);
+                  console.log(compare_price);
+                  if(compare_price && product_index == compare_price_index){
+                    $(priceDiv).append("<span class='order-summary__emphasis skeleton-while-loading' style='text-decoration: line-through;'>$"+compare_price+'</span>');
+                  }
+                  return; 
+                });
+               
+            });
+            
+      });
+    </script>
+    </body>
+  </html>

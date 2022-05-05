@@ -1,0 +1,17 @@
+<style>
+  .style-me-notification {
+    right: 25px !important;
+    bottom: calc(50px + env(safe-area-inset-bottom)) !important
+  }
+</style>
+
+<script id="styleme_config" type="lazyload2" data-src="{{ 'styleme.js' | asset_url }}" data-domain="{{ shop.permanent_domain }}"></script>
+
+<script type="lazyload2">
+	setTimeout(function() {
+      const option = { event: 'replaceState' };
+      styleMe.watchState(() => {
+        console.log('replace state');
+      }, option);
+	}, 2000);
+</script>

@@ -1,0 +1,93 @@
+<script>
+ 
+   document.addEventListener("DOMContentLoaded", function(event) {	 
+ 	_usfSetPrimebs();	
+
+     setTimeout(function() {
+	_usfSetPrimebs();
+	}, 5000);
+	 
+   	});
+	 
+
+function updatePrimeBadge() {
+  $(".prime-temp").each(function() {
+	$("#prime-custom-" + $(this).attr("data-productid")).html($(this).html());
+  });
+}
+
+                        	 
+function _usfSetPrimebs() {
+   var primebs = document.querySelectorAll('[data-primeb]');
+ 
+   for (el of primebs) {
+	 console.log(el);
+   	_getPrimebHtml(el)
+   }
+setTimeout(function() {
+    country = 'primebadgecountry';
+     primebCountdownTimer();
+      }, 1000); 
+}
+
+window._usfPrimebs = {};
+function _getPrimebHtml(el) {
+ 
+   var handle = el.getAttribute('data-primeb');
+   if (!handle)
+   	return;
+	
+var group = el.getAttribute('data-primebgroup');
+  
+   if (!group)
+   {
+     group = "1";
+   }
+
+   if (_usfPrimebs[handle+group]) {
+   	el.innerHTML = _usfPrimebs[handle+group];
+   	el.removeAttribute('data-primeb');
+   	return;
+   }
+ 
+   var comp = this;
+   var xhr = new XMLHttpRequest();
+  var url = `/products/${handle}?view=filter-primeb`;
+
+
+if(group == "2")
+  {
+   url = `/products/${handle}?view=filter-primeb2`;
+
+  }
+else if(group == "3")
+  {
+   url = `/products/${handle}?view=filter-primeb3`;
+
+  }
+
+   xhr.open("GET", url, true);
+   xhr.setRequestHeader("Cache-Control", "max-age=3600");
+   xhr.onreadystatechange = function() {
+   	if (this.readyState === XMLHttpRequest.DONE) {
+       	if (this.status === 200) {
+if(this.responseText.includes('doctype'))
+            {
+              ;
+            }
+          else
+          {
+
+           	_usfPrimebs[handle+group] = this.responseText;
+           	el.innerHTML = this.responseText;
+           	el.removeAttribute('data-primeb');
+}
+       	} else {
+           	console.log(this.status, this.statusText);
+       	}
+   	}
+   };
+   xhr.send();
+}
+
+</script>
